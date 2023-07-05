@@ -8,7 +8,7 @@ Author: Qndrs
 Author URI: qndrs.nl
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Version: 1.3
+Version: 1.4
 */
 // Adding admin menu
 function sql_to_table_add_admin_menu() {
@@ -81,7 +81,7 @@ function sql_to_table_options_page() {
 	            <?php wp_nonce_field( 'sql_to_table_update_queries' ); ?>
                 <input type="hidden" name="id" value="<?php echo esc_attr($query->id); ?>">
                 <label for="query">Query:</label><br>
-                <textarea name="query" id="query" cols="40" rows="5"><?php echo esc_textarea($query->query); ?></textarea><br>
+                <textarea name="query" id="query" cols="40" rows="5" class="sql-query"><?php echo esc_textarea($query->query); ?></textarea><br>
                 <label for="shortcode">Shortcode:</label><br>
                 <input type="text" id="shortcode" value="<?php echo esc_attr($query->shortcode); ?>" readonly><br>
                 <input type="submit" name="update" value="Update">
@@ -94,7 +94,7 @@ function sql_to_table_options_page() {
         <form method="post">
 	        <?php wp_nonce_field( 'sql_to_table_update_queries' ); ?>
             <label for="query">Query:</label><br>
-            <textarea name="query" id="query" cols="40" rows="5"></textarea><br>
+            <textarea name="query" id="query" cols="40" rows="5" class="sql-query"></textarea><br>
             <input type="submit" name="add" value="Add">
         </form>
     </div>
@@ -177,3 +177,25 @@ function enqueue_sorttable_script() {
 }
 add_action( 'wp_enqueue_scripts', 'enqueue_sorttable_script' );
 
+function my_enqueue($hook) {
+	if ('toplevel_page_mypluginname' != $hook) {
+		return;
+	}
+
+	// Enqueue code editor and settings for manipulating HTML.
+	$settings = wp_enqueue_code_editor(array('type' => 'text/sql'));
+
+	// Bail if user has disabled CodeMirror.
+	if (false === $settings) {
+		return;
+	}
+
+	wp_enqueue_script('wp-theme-plugin-editor');
+	wp_add_inline_script('wp-theme-plugin-editor', sprintf('jQuery(document).ready(function($) { 
+        $( ".sql-query" ).each(function( index ) { 
+            wp.codeEditor.initialize($(this), %s); 
+        });
+    });', wp_json_encode($settings)));
+}
+
+add_action('admin_enqueue_scripts', 'my_enqueue');
