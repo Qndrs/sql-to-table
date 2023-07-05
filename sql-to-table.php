@@ -12,7 +12,8 @@ Version: 1.4
 */
 // Adding admin menu
 function sql_to_table_add_admin_menu() {
-	add_menu_page( 'SQL to Table', 'SQL to Table', 'manage_options', 'sql_to_table', 'sql_to_table_options_page' );
+	global $sql_to_table_page_hook;
+	$sql_to_table_page_hook = add_menu_page( 'SQL to Table', 'SQL to Table', 'manage_options', 'sql_to_table', 'sql_to_table_options_page' );
 }
 add_action( 'admin_menu', 'sql_to_table_add_admin_menu' );
 
@@ -177,8 +178,8 @@ function enqueue_sorttable_script() {
 }
 add_action( 'wp_enqueue_scripts', 'enqueue_sorttable_script' );
 
-function my_enqueue($hook) {
-	if ('sql_to_table' != $hook) {
+function my_sql_to_table_enqueue($hook) {
+	if ($sql_to_table_page_hook != $hook) {
 		return;
 	}
 	wp_enqueue_style('codemirror_css', 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.3/codemirror.min.css');
@@ -186,7 +187,7 @@ function my_enqueue($hook) {
 	wp_enqueue_script('codemirror_mode_sql', 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.3/mode/sql/sql.min.js');
 	wp_enqueue_script('my_custom_script', plugins_url('/sql-script.js', __FILE__));
 }
-add_action('admin_enqueue_scripts', 'my_enqueue');
+add_action('admin_enqueue_scripts', 'my_sql_to_table_enqueue');
 
 //function my_enqueue($hook) {
 //	if ('sql_to_table_add_admin_menu' != $hook) {
