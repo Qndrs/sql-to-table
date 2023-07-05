@@ -101,7 +101,65 @@ function sql_to_table_options_page() {
 	<?php
 }
 
-// TODO: Add code here for handling the shortcode
+// Add the shortcode handler
+add_shortcode( 'sql_to_table', 'sql_to_table_shortcode_handler' );
+
+function sql_to_table_shortcode_handler( $atts ) {
+	// Shortcodes attributes
+	$atts = shortcode_atts( array(
+		'id' => null,
+	), $atts );
+
+	// Get the query associated with the id from the database
+	global $wpdb;
+	$table_name = $wpdb->prefix . 'sql_to_table_queries';
+	$query_row = $wpdb->get_row( $wpdb->prepare(
+		"SELECT * FROM $table_name WHERE id = %d",
+		$atts['id']
+	) );
+
+	// If there is no query with this id, return an error message
+	if ( $query_row === null ) {
+		return 'No query found with this id.';
+	}
+
+	// Run the query
+	$results = $wpdb->get_results( $query_row->query, ARRAY_A );
+
+	// If there was an error running the query, return an error message
+	if ( $wpdb->last_error ) {
+		return 'Error running query: ' . $wpdb->last_error;
+	}
+
+	// Start the output
+	$output = '<table class="sortable">';
+
+	// Header row
+	if ( ! empty( $results ) ) {
+		$output .= '<thead><tr>';
+		foreach ( $results[0] as $key => $value ) {
+			$output .= '<th>' . esc_html( $key ) . '</th>';
+		}
+		$output .= '</tr></thead>';
+	}
+
+	// Data rows
+	$output .= '<tbody>';
+	foreach ( $results as $row ) {
+		$output .= '<tr>';
+		foreach ( $row as $value ) {
+			$output .= '<td>' . esc_html( $value ) . '</td>';
+		}
+		$output .= '</tr>';
+	}
+	$output .= '</tbody>';
+
+	// End the output
+	$output .= '</table>';
+
+	return $output;
+}
+
 
 // TODO: Add code here for executing SQL queries and generating the table
 
