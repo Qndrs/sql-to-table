@@ -178,36 +178,13 @@ function enqueue_sorttable_script() {
 }
 add_action( 'wp_enqueue_scripts', 'enqueue_sorttable_script' );
 
-//function my_sql_to_table_enqueue($hook) {
+function my_sql_to_table_enqueue($hook) {
 //	if ($sql_to_table_page_hook != $hook) {
 //		return;
 //	}
-//	wp_enqueue_style('codemirror_css', 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.3/codemirror.min.css');
-//	wp_enqueue_script('codemirror_js', 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.3/codemirror.min.js');
-//	wp_enqueue_script('codemirror_mode_sql', 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.3/mode/sql/sql.min.js');
-//	wp_enqueue_script('my_custom_script', plugins_url('/sql-script.js', __FILE__));
-//}
-//add_action('admin_enqueue_scripts', 'my_sql_to_table_enqueue');
-
-function sql_to_table_enqueue($hook) {
-//	if ($sql_to_table_page_hook != $hook) {
-//		return;
-//	}
-
-	// Enqueue code editor and settings for manipulating HTML.
-	$settings = wp_enqueue_code_editor(array('type' => 'text/sql'));
-
-	// Bail if user has disabled CodeMirror.
-	if (false === $settings) {
-		return;
-	}
-
-	wp_enqueue_script('wp-theme-plugin-editor');
-	wp_add_inline_script('wp-theme-plugin-editor', sprintf('jQuery(document).ready(function($) {
-        $( ".sql-query" ).each(function( index ) {
-            wp.codeEditor.initialize($(this), %s);
-        });
-    });', wp_json_encode($settings)));
+	wp_enqueue_style('codemirror_css', 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.3/codemirror.min.css');
+	wp_enqueue_script('codemirror_js', 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.3/codemirror.min.js');
+	wp_enqueue_script('codemirror_mode_sql', 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.3/mode/sql/sql.min.js');
+	wp_enqueue_script('my_custom_script', plugins_url('/sql-script.js', __FILE__));
 }
-
-add_action('admin_enqueue_scripts', 'sql_to_table_enqueue');
+add_action('admin_enqueue_scripts', 'my_sql_to_table_enqueue');
