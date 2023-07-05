@@ -10,7 +10,6 @@ License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Version: 1.0
 */
-// TODO: Add code here for creating the admin panel
 // Adding admin menu
 function sql_to_table_add_admin_menu() {
 	add_menu_page( 'SQL to Table', 'SQL to Table', 'manage_options', 'sql_to_table', 'sql_to_table_options_page' );
@@ -42,6 +41,34 @@ register_activation_hook( __FILE__, 'sql_to_table_install' );
 function sql_to_table_options_page() {
 	global $wpdb;
 	$table_name = $wpdb->prefix . 'sql_to_table_queries';
+
+	// Check if the form is submitted
+	if ( isset( $_POST['update'] ) || isset( $_POST['delete'] ) || isset( $_POST['add'] ) ) {
+		// Verify the nonce
+		check_admin_referer( 'sql_to_table_update_queries' );
+
+		if ( isset( $_POST['update'] ) ) {
+			// Update an existing query
+			$wpdb->update(
+				$table_name,
+				array( 'query' => $_POST['query'] ), // data
+				array( 'id' => $_POST['id'] ) // where
+			);
+		} elseif ( isset( $_POST['delete'] ) ) {
+			// Delete a query
+			$wpdb->delete(
+				$table_name,
+				array( 'id' => $_POST['id'] ) // where
+			);
+		} elseif ( isset( $_POST['add'] ) ) {
+			// Add a new query
+			$wpdb->insert(
+				$table_name,
+				array( 'query' => $_POST['query'] ) // data
+			);
+		}
+	}
+
 	$queries = $wpdb->get_results("SELECT * FROM $table_name");
 
 	?>
@@ -51,6 +78,7 @@ function sql_to_table_options_page() {
 		foreach ( $queries as $query ) {
 			?>
             <form method="post">
+	            <?php wp_nonce_field( 'sql_to_table_update_queries' ); ?>
                 <input type="hidden" name="id" value="<?php echo esc_attr($query->id); ?>">
                 <label for="query">Query:</label><br>
                 <textarea name="query" id="query" cols="40" rows="5"><?php echo esc_textarea($query->query); ?></textarea><br>
@@ -64,6 +92,7 @@ function sql_to_table_options_page() {
 		?>
         <h2>Add New Query</h2>
         <form method="post">
+	        <?php wp_nonce_field( 'sql_to_table_update_queries' ); ?>
             <label for="query">Query:</label><br>
             <textarea name="query" id="query" cols="40" rows="5"></textarea><br>
             <input type="submit" name="add" value="Add">
@@ -71,7 +100,6 @@ function sql_to_table_options_page() {
     </div>
 	<?php
 }
-
 
 // TODO: Add code here for handling the shortcode
 
