@@ -8,7 +8,7 @@ Author: Qndrs
 Author URI: qndrs.nl
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Version: 1.2
+Version: 1.3
 */
 // Adding admin menu
 function sql_to_table_add_admin_menu() {
@@ -162,6 +162,18 @@ function sql_to_table_shortcode_handler( $atts ) {
 }
 
 
-// TODO: Add code here for executing SQL queries and generating the table
+function enqueue_sorttable_script() {
+	// Define the path to sorttable.js (Modify it according to your actual path)
+	$sorttable_js_path = plugin_dir_url(__FILE__) . 'sorttable.js';
 
-// TODO: Add code here for enqueueing sorttable.js on the pages where the shortcode is used
+	// Get global post object
+	global $post;
+
+	// Check if the post content contains the 'sql_to_table' shortcode
+	if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'sql_to_table' ) ) {
+		// Enqueue sorttable.js
+		wp_enqueue_script( 'sorttable', $sorttable_js_path, array(), '1.0', true );
+	}
+}
+add_action( 'wp_enqueue_scripts', 'enqueue_sorttable_script' );
+
