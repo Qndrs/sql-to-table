@@ -4,6 +4,6 @@ document.addEventListener('DOMContentLoaded', function () {
         CodeMirror.fromTextArea(textarea, {
             lineNumbers: true,
             mode: "sql"
-        });
+        }).setSize(400, 100);
     });
 });

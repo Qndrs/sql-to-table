@@ -8,7 +8,7 @@ Author: Qndrs
 Author URI: qndrs.nl
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Version: 1.4
+Version: 1.6
 */
 // Adding admin menu
 function sql_to_table_add_admin_menu() {
@@ -82,9 +82,9 @@ function sql_to_table_options_page() {
 	            <?php wp_nonce_field( 'sql_to_table_update_queries' ); ?>
                 <input type="hidden" name="id" value="<?php echo esc_attr($query->id); ?>">
                 <label for="query">Query:</label><br>
-                <textarea name="query" id="query" cols="40" rows="5" class="sql-query"><?php echo esc_textarea($query->query); ?></textarea><br>
+                <textarea name="query" id="query" cols="40" rows="5" class="sql-query"><?php echo stripslashes(esc_textarea($query->query)); ?></textarea><br>
                 <label for="shortcode">Shortcode:</label><br>
-                <input type="text" id="shortcode" value="<?php echo esc_attr($query->shortcode); ?>" readonly><br>
+                <input type="text" id="shortcode" value="[sql_to_table id='<?php echo esc_attr($query->id); ?>']" readonly><br>
                 <input type="submit" name="update" value="Update">
                 <input type="submit" name="delete" value="Delete">
             </form>
@@ -188,3 +188,27 @@ function my_sql_to_table_enqueue($hook) {
 	wp_enqueue_script('my_custom_script', plugins_url('/sql-script.js', __FILE__));
 }
 add_action('admin_enqueue_scripts', 'my_sql_to_table_enqueue');
+
+function sanitize_sql_query($query) {
+	// Remove trailing and leading white spaces
+	$query = trim($query);
+
+	// Check if there's more than one statement
+	$semicolon_position = strpos($query, ';');
+	if ($semicolon_position !== false && $semicolon_position !== strlen($query) - 1) {
+		throw new Exception("Only one SQL statement is allowed.");
+	}
+
+	// Check that the query begins with "SELECT"
+	if (strtoupper(substr($query, 0, 6)) !== "SELECT") {
+		throw new Exception("Only SELECT statements are allowed.");
+	}
+
+	// For extra security, use a regular expression to allow only alphanumeric characters, spaces, underscores, dots, commas, parentheses, equals signs and single quotes
+	if (!preg_match("/^[a-zA-Z0-9\s_,\.\(\)='*]+$/", $query)) {
+		throw new Exception("Invalid characters in SQL statement.");
+	}
+
+	// If all checks pass, return the query
+	return $query;
+}
