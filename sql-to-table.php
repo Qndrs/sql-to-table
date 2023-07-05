@@ -8,7 +8,7 @@ Author: Qndrs
 Author URI: qndrs.nl
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Version: 1.0
+Version: 1.2
 */
 // Adding admin menu
 function sql_to_table_add_admin_menu() {
@@ -123,11 +123,12 @@ function sql_to_table_shortcode_handler( $atts ) {
 		return 'No query found with this id.';
 	}
 
-	// Run the query
-	$results = $wpdb->get_results( $query_row->query, ARRAY_A );
+	if($result) {
+		// Unescape the query before executing it
+		$query = stripslashes($result->query);
+		$results = $wpdb->get_results($query, ARRAY_A);
 
-	// If there was an error running the query, return an error message
-	if ( $wpdb->last_error ) {
+	} else {
 		return 'Error running query: ' . $wpdb->last_error;
 	}
 
