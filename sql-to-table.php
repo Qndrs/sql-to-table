@@ -123,9 +123,9 @@ function sql_to_table_shortcode_handler( $atts ) {
 		return 'No query found with this id.';
 	}
 
-	if($result) {
+	if($query_row) {
 		// Unescape the query before executing it
-		$query = stripslashes($result->query);
+		$query = stripslashes($query_row->query);
 		$results = $wpdb->get_results($query, ARRAY_A);
 
 	} else {
