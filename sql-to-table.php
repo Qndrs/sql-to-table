@@ -8,7 +8,7 @@ Author: Qndrs
 Author URI: qndrs.nl
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Version: 1.6
+Version: 1.8
 */
 // Adding admin menu
 function sql_to_table_add_admin_menu() {
@@ -47,8 +47,7 @@ function sql_to_table_options_page() {
 	if ( isset( $_POST['update'] ) || isset( $_POST['delete'] ) || isset( $_POST['add'] ) ) {
 		// Verify the nonce
 		check_admin_referer( 'sql_to_table_update_queries' );
-
-		if ( isset( $_POST['update'] ) ) {
+		if ( isset( $_POST['update'] ) AND sanitize_sql_query($_POST['query']) ) {
 			// Update an existing query
 			$wpdb->update(
 				$table_name,
@@ -61,7 +60,7 @@ function sql_to_table_options_page() {
 				$table_name,
 				array( 'id' => $_POST['id'] ) // where
 			);
-		} elseif ( isset( $_POST['add'] ) ) {
+		} elseif ( isset( $_POST['add'] )  AND sanitize_sql_query($_POST['query']) ) {
 			// Add a new query
 			$wpdb->insert(
 				$table_name,
@@ -196,17 +195,20 @@ function sanitize_sql_query($query) {
 	// Check if there's more than one statement
 	$semicolon_position = strpos($query, ';');
 	if ($semicolon_position !== false && $semicolon_position !== strlen($query) - 1) {
-		throw new Exception("Only one SQL statement is allowed.");
+//		throw new Exception("Only one SQL statement is allowed.");
+        return false;
 	}
 
 	// Check that the query begins with "SELECT"
 	if (strtoupper(substr($query, 0, 6)) !== "SELECT") {
-		throw new Exception("Only SELECT statements are allowed.");
+//		throw new Exception("Only SELECT statements are allowed.");
+        return false;
 	}
 
 	// For extra security, use a regular expression to allow only alphanumeric characters, spaces, underscores, dots, commas, parentheses, equals signs and single quotes
-	if (!preg_match("/^[a-zA-Z0-9\s_,\.\(\)='*]+$/", $query)) {
-		throw new Exception("Invalid characters in SQL statement.");
+	if (!preg_match("/^[a-zA-Z0-9 _,.'=()]*$/", $query)) {
+//		throw new Exception("Invalid characters in SQL statement.");
+        return false;
 	}
 
 	// If all checks pass, return the query
