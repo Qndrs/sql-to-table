@@ -8,7 +8,7 @@ Author: Qndrs
 Author URI: qndrs.nl
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Version: 1.8
+Version: 2.0
 */
 // Adding admin menu
 function sql_to_table_add_admin_menu() {
@@ -157,7 +157,23 @@ function sql_to_table_shortcode_handler( $atts ) {
 
 	// End the output
 	$output .= '</table>';
+	// Add the Export to JSON button
+	$output .= "<button id='export-json' onclick='exportToJson(" . json_encode($results) . ")'>Export to JSON</button>";
 
+	// Add script for Export to JSON functionality
+	$output .= "
+    <script type='text/javascript'>
+        function exportToJson(data) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {
+                type: 'application/json'
+            }));
+            a.setAttribute('download', 'data.json');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>";
 	return $output;
 }
 function enqueue_sorttable_script() {
