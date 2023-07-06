@@ -13,7 +13,7 @@ Version: 1.8
 // Adding admin menu
 function sql_to_table_add_admin_menu() {
 	global $sql_to_table_page_hook;
-	$sql_to_table_page_hook = add_menu_page( 'SQL to Table', 'SQL to Table', 'manage_options', 'sql_to_table', 'sql_to_table_options_page' );
+	$sql_to_table_page_hook = add_management_page( 'SQL to Table', 'SQL to Table', 'manage_options', 'sql_to_table', 'sql_to_table_options_page' );
 }
 add_action( 'admin_menu', 'sql_to_table_add_admin_menu' );
 
@@ -133,7 +133,7 @@ function sql_to_table_shortcode_handler( $atts ) {
 	}
 
 	// Start the output
-	$output = '<table class="sortable">';
+	$output = '<table class="sortable" >';
 
 	// Header row
 	if ( ! empty( $results ) ) {
