@@ -160,8 +160,6 @@ function sql_to_table_shortcode_handler( $atts ) {
 
 	return $output;
 }
-
-
 function enqueue_sorttable_script() {
 	// Define the path to sorttable.js (Modify it according to your actual path)
 	$sorttable_js_path = plugin_dir_url(__FILE__) . 'sorttable.js';
@@ -191,26 +189,21 @@ add_action('admin_enqueue_scripts', 'my_sql_to_table_enqueue');
 function sanitize_sql_query($query) {
 	// Remove trailing and leading white spaces
 	$query = trim($query);
-
 	// Check if there's more than one statement
 	$semicolon_position = strpos($query, ';');
 	if ($semicolon_position !== false && $semicolon_position !== strlen($query) - 1) {
-//		throw new Exception("Only one SQL statement is allowed.");
         return false;
 	}
 
 	// Check that the query begins with "SELECT"
 	if (strtoupper(substr($query, 0, 6)) !== "SELECT") {
-//		throw new Exception("Only SELECT statements are allowed.");
         return false;
 	}
 
-	// For extra security, use a regular expression to allow only alphanumeric characters, spaces, underscores, dots, commas, parentheses, equals signs and single quotes
-	if (!preg_match("/^[a-zA-Z0-9 _,.'=()]*$/", $query)) {
-//		throw new Exception("Invalid characters in SQL statement.");
+	// regular expression to allow only alphanumeric characters, spaces, underscores, dots, commas, parentheses, equals signs and quotes
+	if (!preg_match("/[a-zA-Z0-9 _,.'=()\"]*$/", $query)) {
         return false;
 	}
-
-	// If all checks pass, return the query
-	return $query;
+	// If all checks pass, return true
+	return true;
 }
