@@ -133,7 +133,9 @@ function sql_to_table_shortcode_handler( $atts ) {
 	}
 
 	// Start the output
-	$output = '<table class="sortable" >';
+	// Add the Export to JSON button
+	$output = "<button id='export-json' onclick='exportToJson(" . json_encode($results) . ")'>Export to JSON</button>";
+	$output .= '<table class="sortable" >';
 
 	// Header row
 	if ( ! empty( $results ) ) {
@@ -157,8 +159,6 @@ function sql_to_table_shortcode_handler( $atts ) {
 
 	// End the output
 	$output .= '</table>';
-	// Add the Export to JSON button
-	$output .= "<button id='export-json' onclick='exportToJson(" . json_encode($results) . ")'>Export to JSON</button>";
 
 	// Add script for Export to JSON functionality
 	$output .= "
