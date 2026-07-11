@@ -15,15 +15,15 @@
 - [x] Sanitize and normalize request data from `$_POST` using `wp_unslash()`.
 - [x] Cast query IDs with `absint()` before passing them to database operations.
 - [x] Use `$wpdb` format arrays for inserts, updates, and deletes.
-- Restrict CodeMirror admin assets to the plugin settings page.
-- Prefer WordPress-bundled editor assets instead of loading CodeMirror from a CDN.
+- [ ] Restrict CodeMirror admin assets to the plugin settings page.
+- [ ] Prefer WordPress-bundled editor assets instead of loading CodeMirror from a CDN.
 - [x] Handle `$wpdb->get_results()` errors after query execution and return a safe admin/frontend message.
 - [x] Remove unreachable or ineffective error handling around shortcode query execution.
 
 ## Low Priority
 
 - [x] Add `defined( 'ABSPATH' ) || exit;` to PHP entry files.
-- Prefix all plugin functions consistently to reduce global namespace collision risk.
-- Avoid duplicate HTML IDs in admin forms and frontend shortcode output.
-- Clean up commented-out hook-check code in the admin enqueue function.
-- Document the security model clearly: only trusted administrators should manage stored SQL queries.
+- [ ] Prefix all plugin functions consistently to reduce global namespace collision risk.
+- [ ] Avoid duplicate HTML IDs in admin forms and frontend shortcode output.
+- [ ] Clean up commented-out hook-check code in the admin enqueue function.
+- [ ] Document the security model clearly: only trusted administrators should manage stored SQL queries.
