@@ -10,6 +10,17 @@ License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Version: 2.0
 */
+
+defined( 'ABSPATH' ) || exit;
+
+define( 'SQL_TO_TABLE_VERSION', '2.0' );
+
+function sql_to_table_get_table_name() {
+	global $wpdb;
+
+	return $wpdb->prefix . 'sql_to_table_queries';
+}
+
 // Adding admin menu
 function sql_to_table_add_admin_menu() {
 	global $sql_to_table_page_hook;
@@ -21,59 +32,110 @@ add_action( 'admin_menu', 'sql_to_table_add_admin_menu' );
 function sql_to_table_install() {
 	global $wpdb;
 
-	$table_name = $wpdb->prefix . 'sql_to_table_queries';
+	$table_name = sql_to_table_get_table_name();
 
 	$charset_collate = $wpdb->get_charset_collate();
 
 	$sql = "CREATE TABLE $table_name (
         id mediumint(9) NOT NULL AUTO_INCREMENT,
         query text NOT NULL,
-        shortcode text NOT NULL,
         PRIMARY KEY  (id)
     ) $charset_collate;";
 
 	require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
 	dbDelta( $sql );
+
+	sql_to_table_migrate_schema();
+	update_option( 'sql_to_table_version', SQL_TO_TABLE_VERSION );
 }
 
 register_activation_hook( __FILE__, 'sql_to_table_install' );
 
+function sql_to_table_migrate_schema() {
+	global $wpdb;
+
+	$table_name       = sql_to_table_get_table_name();
+	$table_name_sql   = '`' . str_replace( '`', '``', $table_name ) . '`';
+	$table_exists     = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) );
+
+	if ( ! $table_exists ) {
+		return;
+	}
+
+	$shortcode_column = $wpdb->get_var( "SHOW COLUMNS FROM $table_name_sql LIKE 'shortcode'" );
+
+	if ( $shortcode_column ) {
+		$wpdb->query( "ALTER TABLE $table_name_sql DROP COLUMN shortcode" );
+	}
+}
+
+function sql_to_table_maybe_migrate_schema() {
+	if ( SQL_TO_TABLE_VERSION === get_option( 'sql_to_table_version' ) ) {
+		return;
+	}
+
+	sql_to_table_migrate_schema();
+	update_option( 'sql_to_table_version', SQL_TO_TABLE_VERSION );
+}
+add_action( 'plugins_loaded', 'sql_to_table_maybe_migrate_schema' );
+
 // Render the options page
 function sql_to_table_options_page() {
 	global $wpdb;
-	$table_name = $wpdb->prefix . 'sql_to_table_queries';
+	$table_name = sql_to_table_get_table_name();
+	$message    = '';
+	$error      = '';
 
 	// Check if the form is submitted
 	if ( isset( $_POST['update'] ) || isset( $_POST['delete'] ) || isset( $_POST['add'] ) ) {
 		// Verify the nonce
 		check_admin_referer( 'sql_to_table_update_queries' );
-		if ( isset( $_POST['update'] ) AND sanitize_sql_query($_POST['query']) ) {
+		$query_id         = isset( $_POST['id'] ) ? absint( wp_unslash( $_POST['id'] ) ) : 0;
+		$posted_query     = isset( $_POST['query'] ) ? wp_unslash( $_POST['query'] ) : '';
+		$normalized_query = sql_to_table_normalize_select_query( $posted_query );
+
+		if ( isset( $_POST['update'] ) && $query_id && $normalized_query ) {
 			// Update an existing query
 			$wpdb->update(
 				$table_name,
-				array( 'query' => $_POST['query'] ), // data
-				array( 'id' => $_POST['id'] ) // where
+				array( 'query' => $normalized_query ), // data
+				array( 'id' => $query_id ), // where
+				array( '%s' ),
+				array( '%d' )
 			);
-		} elseif ( isset( $_POST['delete'] ) ) {
+			$message = 'Query updated.';
+		} elseif ( isset( $_POST['delete'] ) && $query_id ) {
 			// Delete a query
 			$wpdb->delete(
 				$table_name,
-				array( 'id' => $_POST['id'] ) // where
+				array( 'id' => $query_id ), // where
+				array( '%d' )
 			);
-		} elseif ( isset( $_POST['add'] )  AND sanitize_sql_query($_POST['query']) ) {
+			$message = 'Query deleted.';
+		} elseif ( isset( $_POST['add'] ) && $normalized_query ) {
 			// Add a new query
 			$wpdb->insert(
 				$table_name,
-				array( 'query' => $_POST['query'] ) // data
+				array( 'query' => $normalized_query ), // data
+				array( '%s' )
 			);
+			$message = 'Query added.';
+		} else {
+			$error = 'Only a single read-only SELECT query can be saved.';
 		}
 	}
 
-	$queries = $wpdb->get_results("SELECT * FROM $table_name");
+	$queries = $wpdb->get_results( "SELECT id, query FROM $table_name ORDER BY id ASC" );
 
 	?>
     <div class="wrap">
         <h2>SQL to Table</h2>
+		<?php if ( $message ) : ?>
+            <div class="notice notice-success is-dismissible"><p><?php echo esc_html( $message ); ?></p></div>
+		<?php endif; ?>
+		<?php if ( $error ) : ?>
+            <div class="notice notice-error is-dismissible"><p><?php echo esc_html( $error ); ?></p></div>
+		<?php endif; ?>
 		<?php
 		foreach ( $queries as $query ) {
 			?>
@@ -109,13 +171,18 @@ function sql_to_table_shortcode_handler( $atts ) {
 	$atts = shortcode_atts( array(
 		'id' => null,
 	), $atts );
+	$query_id = absint( $atts['id'] );
+
+	if ( ! $query_id ) {
+		return 'No query found with this id.';
+	}
 
 	// Get the query associated with the id from the database
 	global $wpdb;
-	$table_name = $wpdb->prefix . 'sql_to_table_queries';
+	$table_name = sql_to_table_get_table_name();
 	$query_row = $wpdb->get_row( $wpdb->prepare(
-		"SELECT * FROM $table_name WHERE id = %d",
-		$atts['id']
+		"SELECT id, query FROM $table_name WHERE id = %d",
+		$query_id
 	) );
 
 	// If there is no query with this id, return an error message
@@ -123,18 +190,28 @@ function sql_to_table_shortcode_handler( $atts ) {
 		return 'No query found with this id.';
 	}
 
-	if($query_row) {
-		// Unescape the query before executing it
-		$query = stripslashes($query_row->query);
-		$results = $wpdb->get_results($query, ARRAY_A);
+	$query = sql_to_table_normalize_select_query( stripslashes( $query_row->query ) );
 
-	} else {
-		return 'Error running query: ' . $wpdb->last_error;
+	if ( ! $query ) {
+		return 'This query is not allowed.';
 	}
+
+	wp_enqueue_script( 'sql-to-table-export', plugin_dir_url( __FILE__ ) . 'sql-to-table.js', array(), '2.0', true );
+
+	$results = $wpdb->get_results( $query, ARRAY_A );
+
+	if ( $wpdb->last_error ) {
+		return 'Error running query.';
+	}
+
+	$export_json = wp_json_encode(
+		$results,
+		JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT
+	);
 
 	// Start the output
 	// Add the Export to JSON button
-	$output = "<button id='export-json' onclick='exportToJson(" . json_encode($results) . ")'>Export to JSON</button>";
+	$output = '<button type="button" class="sql-to-table-export" data-sql-to-table-export="' . esc_attr( $export_json ) . '">Export to JSON</button>';
 	$output .= '<table class="sortable" >';
 
 	// Header row
@@ -159,21 +236,6 @@ function sql_to_table_shortcode_handler( $atts ) {
 
 	// End the output
 	$output .= '</table>';
-
-	// Add script for Export to JSON functionality
-	$output .= "
-    <script type='text/javascript'>
-        function exportToJson(data) {
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {
-                type: 'application/json'
-            }));
-            a.setAttribute('download', 'data.json');
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-    </script>";
 	return $output;
 }
 function enqueue_sorttable_script() {
@@ -202,24 +264,42 @@ function my_sql_to_table_enqueue($hook) {
 }
 add_action('admin_enqueue_scripts', 'my_sql_to_table_enqueue');
 
-function sanitize_sql_query($query) {
-	// Remove trailing and leading white spaces
-	$query = trim($query);
-	// Check if there's more than one statement
-	$semicolon_position = strpos($query, ';');
-	if ($semicolon_position !== false && $semicolon_position !== strlen($query) - 1) {
-        return false;
+function sql_to_table_normalize_select_query( $query ) {
+	if ( ! is_string( $query ) ) {
+		return false;
 	}
 
-	// Check that the query begins with "SELECT"
-	if (strtoupper(substr($query, 0, 6)) !== "SELECT") {
-        return false;
+	$query = trim( $query );
+
+	if ( '' === $query ) {
+		return false;
 	}
 
-	// regular expression to allow only alphanumeric characters, spaces, underscores, dots, commas, parentheses, equals signs and quotes
-	if (!preg_match("/[a-zA-Z0-9 _,.'=()\"]*$/", $query)) {
-        return false;
+	if ( ';' === substr( $query, -1 ) ) {
+		$query = trim( substr( $query, 0, -1 ) );
 	}
-	// If all checks pass, return true
-	return true;
+
+	if ( false !== strpos( $query, ';' ) ) {
+		return false;
+	}
+
+	if ( ! preg_match( '/^SELECT\s+/i', $query ) ) {
+		return false;
+	}
+
+	$blocked_patterns = array(
+		'/--|#|\/\*/',
+		'/\b(?:INSERT|UPDATE|DELETE|REPLACE|ALTER|DROP|TRUNCATE|CREATE|GRANT|REVOKE|CALL|DO|LOAD|HANDLER|LOCK|UNLOCK|SET|SHOW|DESCRIBE|EXPLAIN|USE)\b/i',
+		'/\bINTO\b/i',
+		'/\bFOR\s+UPDATE\b/i',
+		'/\bLOCK\s+IN\s+SHARE\s+MODE\b/i',
+	);
+
+	foreach ( $blocked_patterns as $pattern ) {
+		if ( preg_match( $pattern, $query ) ) {
+			return false;
+		}
+	}
+
+	return $query;
 }
